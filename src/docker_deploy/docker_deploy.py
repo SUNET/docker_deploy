@@ -8,11 +8,16 @@ import yaml
 import pwd
 import grp
 
-COMPOSE_FILES = ["./docker-compose.yml", "./docker-compose.yaml", "./compose.yml", "./compose.yaml"]
+COMPOSE_FILES = [
+    "./docker-compose.yml",
+    "./docker-compose.yaml",
+    "./compose.yml",
+    "./compose.yaml",
+]
 
 
 def change_cwd(path: Optional[str]) -> str:
-    """Change current worker dir and return the old cwd.
+    """Change current working dir and return the old cwd.
 
     :param path: Dir to change into.
     :return: str
@@ -27,18 +32,17 @@ def change_cwd(path: Optional[str]) -> str:
 
 
 def check_docker_membership() -> None:
-    """Ensure user is member of the 'docker' group.
-    """
+    """Ensure user is member of the 'docker' group."""
 
     # Check docker group membership
     for group in os.getgroups():
         if grp.getgrgid(group).gr_name == "docker":
             break
-        else:
-            print("ERROR: Your user is not a member of 'docker' group")
-            print(f"sudo usermod -a -G sudo {os.environ['USER']}")
-            print("Then open a new shell")
-            sys.exit(1)
+    else:
+        print("ERROR: Your user is not a member of 'docker' group")
+        print(f"sudo usermod -a -G sudo {os.environ['USER']}")
+        print("Then open a new shell")
+        sys.exit(1)
 
 
 def volumes_from_compose_file() -> Optional[List[Tuple[str, str]]]:
@@ -73,7 +77,9 @@ def volumes_from_compose_file() -> Optional[List[Tuple[str, str]]]:
                     continue
 
                 if not volume.startswith("/opt/"):
-                    print(f"\nWARNING: Skipping volume, must start with /opt/ : {volume_path}\n")
+                    print(
+                        f"\nWARNING: Skipping volume, must start with /opt/ : {volume_path}\n"
+                    )
                     continue
 
                 owner_username = pwd.getpwuid(os.stat(volume_path).st_uid).pw_name
@@ -83,22 +89,27 @@ def volumes_from_compose_file() -> Optional[List[Tuple[str, str]]]:
 
 
 def fix_volumes_ownership() -> None:
-    """Set correct ownership on docker volume dirs.
-    """
+    """Set correct ownership on docker volume dirs."""
 
     volumes = volumes_from_compose_file()
 
     for volume in volumes:
 
         if not os.path.isdir(volume[0]):
-            print(f"\nWARNING: You should probably create and/or set non root owner of volume folder: {volume[0]}\n")
-            print(f"sudo mkdir -p {volume[0]} && sudo chown -R OWNER_HERE {volume[0]}\n")
+            print(
+                f"\nWARNING: You should probably create and/or set non root owner of volume folder: {volume[0]}\n"
+            )
+            print(
+                f"sudo mkdir -p {volume[0]} && sudo chown -R OWNER_HERE {volume[0]}\n"
+            )
             continue
 
         # Do not run on first volumes never used
         owner_username = pwd.getpwuid(os.stat(volume[0]).st_uid).pw_name
         if owner_username == "root":
-            print(f"\nWARNING: You should probably set non root owner of volume folder: {volume[0]}\n")
+            print(
+                f"\nWARNING: You should probably set non root owner of volume folder: {volume[0]}\n"
+            )
             print(f"sudo chown -R OWNER_HERE {volume[0]}\n")
             continue
 
@@ -106,9 +117,9 @@ def fix_volumes_ownership() -> None:
 
 
 def check_compose_file(project_path: Optional[str]) -> None:
-    """Ensure we have a compose file in the project path.
+    """Ensure we have a compose file in the project directory.
 
-    :param project_path: Dir to the project where we look for a compose file.
+    :param project_path: Directory to the project where we look for a compose file.
     """
 
     old_cwd = change_cwd(project_path)
@@ -153,7 +164,9 @@ def backup(project_path: Optional[str]) -> None:
     # Set ownership on the data
     for entry in os.listdir(from_path):
         owner_username = pwd.getpwuid(os.stat(f"{from_path}/{entry}").st_uid).pw_name
-        subprocess.check_call(["sudo", "chown", "-R", owner_username, f"{to_path}/{entry}"])
+        subprocess.check_call(
+            ["sudo", "chown", "-R", owner_username, f"{to_path}/{entry}"]
+        )
 
     print(f"\nBacked up data to {to_path}\n")
     os.chdir(old_cwd)
@@ -190,8 +203,7 @@ def up_action(project_path: Optional[str]) -> None:
 
 
 def info_action() -> None:
-    """Alias for 'docker ps'.
-    """
+    """Alias for 'docker ps'."""
 
     subprocess.check_call(["docker", "ps"])
 
@@ -256,7 +268,9 @@ def deploy_action(project_path: Optional[str], replace_path: Optional[str]) -> N
 
         os.chdir(old_cwd)
 
-        print(f"Backed up project {replace_abs} to {to_path} replaced with {project_abs}")
+        print(
+            f"Backed up project {replace_abs} to {to_path} replaced with {project_abs}"
+        )
         print(f"You can now delete {project_abs}")
     else:
         build(project_path)
@@ -268,7 +282,9 @@ def main() -> None:
 
     check_docker_membership()
 
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, description="SOC Collector CLI")
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawTextHelpFormatter, description="SOC Collector CLI"
+    )
     parser.add_argument(
         "action",
         choices=["info", "backup", "up", "down", "deploy"],
@@ -283,7 +299,7 @@ def main() -> None:
     docker_deploy up
     docker_deploy up ./my_project
 
-    up: [path to project folder to run 'docker-compose down]
+    down: [path to project folder to run 'docker-compose down']
     docker_deploy down
     docker_deploy down ./my_project
 
@@ -320,7 +336,9 @@ def main() -> None:
     """,
     )
     parser.add_argument("project_path", nargs="?", help="Path to project directory")
-    parser.add_argument("replace_path", nargs="?", help="Path to project directory to be replaced")
+    parser.add_argument(
+        "replace_path", nargs="?", help="Path to project directory to be replaced"
+    )
 
     args = parser.parse_args()
 
